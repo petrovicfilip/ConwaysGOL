@@ -9,6 +9,7 @@
 int dx[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
 int dy[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
 
+bool draw_grid = true;
 
 typedef struct {
     SDL_FRect* rect;
@@ -60,6 +61,13 @@ void reviveCell(Cell* cell)
     paintCell(cell, 127, 127, 127); 
 }
 
+void setCellStateAlive(int x, int y, Cell*** cell_matrix)
+{
+    if (cell_matrix[x][y]->alive)
+        return;
+    cell_matrix[x][y]->alive = true;
+    paintCell(cell_matrix[x][y], 127, 127, 127);
+}
 void changeCellState(int x, int y, Cell*** cell_matrix)
 {
     cell_matrix[x][y]->alive = !(cell_matrix[x][y]->alive);
@@ -77,13 +85,17 @@ void changeCellState(int x, int y, Cell*** cell_matrix)
     }
 }
 
+// fja zavisi od draw_grid globalne promenljive!!!
 void drawCell(Cell* cell, SDL_Renderer* renderer)
 {
     SDL_SetRenderDrawColor(renderer, cell->color->r, cell->color->g, cell->color->b, cell->color->a);
     SDL_RenderFillRect(renderer, cell->rect);
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); 
-    SDL_RenderRect(renderer, cell->rect);
+    if(draw_grid)
+    {
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); 
+        SDL_RenderRect(renderer, cell->rect);
+    }
 }
 
 void drawGrid(Cell*** cell_matrix, int rows, int cols, SDL_Renderer* renderer)
@@ -129,7 +141,6 @@ void evolveToNextGen(Cell*** cell_matrix, int rows, int cols)
             else
                 new_states[i][j] = false;
                 if(cell_matrix[i][j]->alive)
-                    //cell_matrix[i][j]->died = true;
                     paintCell(cell_matrix[i][j], 204, 252, 249);
         }
     }
@@ -163,6 +174,7 @@ int main(int argc, char* argv[])
 
     int frame_time;
     int start_of_frame_time;
+    bool dragging;
 
 
     Cell*** cell_matrix = makeCells(display.w, display.h, renderer);
@@ -176,12 +188,29 @@ int main(int argc, char* argv[])
                 running = false;
             else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_SPACE)
                 evolve = !evolve;
-            else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+            else if(event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_G)
+                draw_grid = !draw_grid;
+            else if(event.type == SDL_EVENT_MOUSE_MOTION && dragging)
+            {
+                int x = event.button.x;
+                int y = event.button.y;
+                setCellStateAlive(y / CELL_SIZE, x / CELL_SIZE, cell_matrix);
+            }
+            else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_LEFT)
             {
                 int x = event.button.x;
                 int y = event.button.y;
                 changeCellState(y / CELL_SIZE, x / CELL_SIZE, cell_matrix);
             }
+            else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_RIGHT)
+            {
+                dragging = true;
+                int x = event.button.x;
+                int y = event.button.y;
+                setCellStateAlive(y / CELL_SIZE, x / CELL_SIZE, cell_matrix);
+            }
+            else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && event.button.button == SDL_BUTTON_RIGHT)
+                dragging = false;
         }
         if (evolve)
             evolveToNextGen(cell_matrix, display.h / CELL_SIZE, display.w / CELL_SIZE);
