@@ -19,6 +19,13 @@ typedef struct {
 
 } Cell;
 
+void deleteCell(Cell* cell)
+{
+    free(cell->rect);
+    free(cell->color);
+    free(cell);
+}
+
 Cell* makeCell(int x, int y, int h, int w, int r, int g, int b)
 {
     SDL_FRect* rect = (SDL_FRect*)malloc(sizeof(SDL_FRect));
@@ -68,6 +75,7 @@ void setCellStateAlive(int x, int y, Cell*** cell_matrix)
     cell_matrix[x][y]->alive = true;
     paintCell(cell_matrix[x][y], 127, 127, 127);
 }
+
 void changeCellState(int x, int y, Cell*** cell_matrix)
 {
     cell_matrix[x][y]->alive = !(cell_matrix[x][y]->alive);
@@ -228,6 +236,15 @@ int main(int argc, char* argv[])
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    
+    for (int i = 0; i < display.h / CELL_SIZE; i++)
+    {
+        for (int j = 0; j < display.w / CELL_SIZE; j++)
+            deleteCell(cell_matrix[i][j]);
+        free(cell_matrix[i]);
+    }       
+    free(cell_matrix);
+
     SDL_Quit();
     return 0;
 }   
